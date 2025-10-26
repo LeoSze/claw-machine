@@ -305,21 +305,25 @@ function checkPlayerTimeout() {
     if (timeSinceLastAction >= INACTIVITY_TIMEOUT) {
       console.log(`⏰ ${currentPlayer.username} 超過 1 分鐘無操作，釋放控制權`);
 
-      const timeoutPlayer = currentPlayer;
+      const timeoutPlayer = {
+        userId: currentPlayer.userId,
+        username: currentPlayer.username,
+        ws: currentPlayer.ws
+      };
 
-      // 通知當前玩家控制權已被釋放
+      // 釋放控制權（這會關閉繼電器連接並廣播狀態）
+      releaseControl();
+
+      // 超時後不自動重新排隊，讓玩家手動選擇是否繼續
+      console.log(`⏰ ${timeoutPlayer.username} 已超時，需要手動重新加入遊戲`);
+
+      // 明確通知該玩家超時（在 releaseControl 之後）
       if (timeoutPlayer.ws && timeoutPlayer.ws.readyState === 1) {
         timeoutPlayer.ws.send(JSON.stringify({
           type: 'timeout',
           message: '您已超過 1 分鐘沒有操作，控制權已轉移'
         }));
       }
-
-      // 釋放控制權
-      releaseControl();
-
-      // 超時後不自動重新排隊，讓玩家手動選擇是否繼續
-      console.log(`⏰ ${timeoutPlayer.username} 已超時，需要手動重新加入遊戲`);
 
       // 嘗試給予下一位等待的玩家
       assignNextPlayer();

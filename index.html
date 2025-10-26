@@ -2088,42 +2088,14 @@
           console.warn('⏰', data.message);
           showToast('⏰ ' + data.message, 4000);
           hasControlPermission = false; // 更新控制權狀態
-          // 顯示重新加入按鈕
-          if (playerStatus) {
-            playerStatus.className = 'player-status not-in-queue';
-            playerStatus.innerHTML = `
-              <div class="player-status-text">⏰ 已超時</div>
-              <div class="player-status-detail">您已超過 1 分鐘沒有操作<br>💡 點擊下方按鈕重新加入遊戲</div>
-            `;
-          }
-          if (mobilePlayerStatus) {
-            mobilePlayerStatus.className = 'mobile-player-status not-in-queue';
-            mobilePlayerStatus.innerHTML = `
-              <div class="mobile-player-status-text">⏰ 已超時</div>
-              <div class="mobile-player-status-detail">點擊重新加入</div>
-            `;
-          }
-          updateJoinButton('block', '重新加入', false);
+          // 不要在這裡手動設置 UI，等待後續的 player_status 廣播更新
+          // 這樣可以確保狀態同步正確
         } else if (data.type === 'control_lost') {
           // 失去控制權（被動釋放，如斷線、超時等）
           console.warn('❌', data.message);
           hasControlPermission = false; // 更新控制權狀態
-          // 顯示重新加入按鈕
-          if (playerStatus) {
-            playerStatus.className = 'player-status not-in-queue';
-            playerStatus.innerHTML = `
-              <div class="player-status-text">❌ 已失去控制權</div>
-              <div class="player-status-detail">${data.message || '您已失去控制權'}<br>💡 點擊下方按鈕重新加入遊戲</div>
-            `;
-          }
-          if (mobilePlayerStatus) {
-            mobilePlayerStatus.className = 'mobile-player-status not-in-queue';
-            mobilePlayerStatus.innerHTML = `
-              <div class="mobile-player-status-text">❌ 已失去控制權</div>
-              <div class="mobile-player-status-detail">點擊重新加入</div>
-            `;
-          }
-          updateJoinButton('block', '重新加入', false);
+          // 不要在這裡手動設置 UI，等待後續的 player_status 廣播更新
+          // 這樣可以確保狀態同步正確
         } else if (data.type === 'relay_connected') {
           // 繼電器連接成功（不更新 UI 狀態）
           console.log('✅', data.message);
