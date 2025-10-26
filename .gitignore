@@ -40,3 +40,9 @@ nul
 # Python 測試檔案
 *.pyc
 __pycache__/
+
+# SSL/TLS 證書和私鑰
+*.pem
+*.key
+*.crt
+*.cert
