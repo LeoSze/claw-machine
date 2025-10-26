@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>HLS 監控系統（原生 H.264）</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #header {
+      background: rgba(20, 20, 20, 0.95);
+      padding: 12px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    h1 {
+      font-size: 1.2em;
+      background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #video-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.9em;
+    }
+
+    .status {
+      color: #4ade80;
+    }
+  </style>
+
+  <!-- 使用 HLS.js 支援所有瀏覽器 -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <div id="header">
+    <h1>🎥 監控系統 - HLS 原生 H.264 解碼</h1>
+  </div>
+
+  <div id="video-container">
+    <video id="video" controls autoplay muted></video>
+    <div class="info">
+      <span class="status">● 使用硬體解碼 - 超流暢！</span>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const videoSrc = '/hls/stream.m3u8';
+
+    // 檢查瀏覽器是否原生支援 HLS
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari 原生支援
+      video.src = videoSrc;
+      console.log('使用 Safari 原生 HLS');
+    } else if (Hls.isSupported()) {
+      // 其他瀏覽器使用 HLS.js
+      const hls = new Hls({
+        // 穩定播放配置（優先流暢度）
+        maxBufferLength: 30,          // 最大緩衝 30 秒
+        maxMaxBufferLength: 60,       // 最大最大緩衝 60 秒
+        maxBufferSize: 60 * 1000 * 1000, // 60MB
+        maxBufferHole: 0.5,           // 最大緩衝洞 0.5 秒
+        liveSyncDuration: 3,          // 即時同步 3 秒
+        liveMaxLatencyDuration: 10,   // 最大延遲 10 秒
+        enableWorker: true,           // 啟用 Web Worker
+        lowLatencyMode: false,        // 關閉低延遲模式（優先穩定）
+        backBufferLength: 90,         // 後緩衝 90 秒
+      });
+
+      hls.loadSource(videoSrc);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, function() {
+        console.log('✅ HLS 串流載入成功 - 使用硬體解碼！');
+        video.play();
+      });
+
+      hls.on(Hls.Events.ERROR, function(event, data) {
+        console.error('HLS 錯誤:', data);
+      });
+    } else {
+      console.error('瀏覽器不支援 HLS');
+    }
+  </script>
+</body>
+</html>

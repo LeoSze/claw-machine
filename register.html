@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>註冊 - 小明的夾公仔機</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .register-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo h1 {
+      font-size: 1.8em;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .logo p {
+      color: #888;
+      font-size: 0.9em;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1em;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group input.error {
+      border-color: #ef4444;
+    }
+
+    .form-help {
+      font-size: 0.8em;
+      color: #888;
+      margin-top: 5px;
+    }
+
+    .btn-register {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .btn-register:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-register:active {
+      transform: translateY(0);
+    }
+
+    .divider {
+      text-align: center;
+      margin: 25px 0;
+      color: #888;
+      position: relative;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 45%;
+      height: 1px;
+      background: #e0e0e0;
+    }
+
+    .divider::before {
+      left: 0;
+    }
+
+    .divider::after {
+      right: 0;
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+      font-size: 0.95em;
+    }
+
+    .login-link a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+
+    .error-message {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9em;
+      display: none;
+      border-left: 4px solid #c33;
+    }
+
+    .password-strength {
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .password-strength-bar {
+      height: 100%;
+      width: 0;
+      transition: all 0.3s ease;
+      border-radius: 2px;
+    }
+
+    .strength-weak {
+      width: 33%;
+      background: #ef4444;
+    }
+
+    .strength-medium {
+      width: 66%;
+      background: #f59e0b;
+    }
+
+    .strength-strong {
+      width: 100%;
+      background: #10b981;
+    }
+
+    @media (max-width: 480px) {
+      .register-container {
+        padding: 30px 25px;
+      }
+
+      .logo h1 {
+        font-size: 1.5em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <div class="logo">
+      <h1>小明的夾公仔機</h1>
+      <p>建立新帳號</p>
+    </div>
+
+    <div class="error-message" id="error-message"></div>
+
+    <form id="register-form">
+      <div class="form-group">
+        <label for="username">使用者名稱</label>
+        <input type="text" id="username" name="username" required autocomplete="username" minlength="3" maxlength="50">
+        <div class="form-help">3-50 個字元</div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">電子郵件</label>
+        <input type="email" id="email" name="email" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password">密碼</label>
+        <input type="password" id="password" name="password" required autocomplete="new-password" minlength="6">
+        <div class="password-strength">
+          <div class="password-strength-bar" id="password-strength-bar"></div>
+        </div>
+        <div class="form-help">至少 6 個字元</div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm-password">確認密碼</label>
+        <input type="password" id="confirm-password" name="confirm-password" required autocomplete="new-password">
+      </div>
+
+      <button type="submit" class="btn-register">註冊</button>
+    </form>
+
+    <div class="divider">或</div>
+
+    <div class="login-link">
+      已經有帳號？ <a href="/login.html">立即登入</a>
+    </div>
+  </div>
+
+  <script>
+    const registerForm = document.getElementById('register-form');
+    const errorMessage = document.getElementById('error-message');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm-password');
+    const passwordStrengthBar = document.getElementById('password-strength-bar');
+
+    // 密碼強度檢測
+    passwordInput.addEventListener('input', () => {
+      const password = passwordInput.value;
+      let strength = 0;
+
+      if (password.length >= 6) strength++;
+      if (password.length >= 10) strength++;
+      if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+      if (/\d/.test(password)) strength++;
+      if (/[^a-zA-Z0-9]/.test(password)) strength++;
+
+      passwordStrengthBar.className = 'password-strength-bar';
+      if (strength <= 2) {
+        passwordStrengthBar.classList.add('strength-weak');
+      } else if (strength <= 4) {
+        passwordStrengthBar.classList.add('strength-medium');
+      } else {
+        passwordStrengthBar.classList.add('strength-strong');
+      }
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      errorMessage.style.display = 'none';
+
+      const username = document.getElementById('username').value;
+      const email = document.getElementById('email').value;
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+
+      // 前端驗證
+      if (password !== confirmPassword) {
+        errorMessage.textContent = '密碼與確認密碼不相符';
+        errorMessage.style.display = 'block';
+        confirmPasswordInput.classList.add('error');
+        return;
+      }
+
+      confirmPasswordInput.classList.remove('error');
+
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, email, password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // 註冊成功，重新導向到登入頁面
+          window.location.href = '/login.html?registered=true';
+        } else {
+          // 顯示錯誤訊息
+          errorMessage.textContent = data.message || '註冊失敗，請稍後再試';
+          errorMessage.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('註冊錯誤:', error);
+        errorMessage.textContent = '發生錯誤，請稍後再試';
+        errorMessage.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

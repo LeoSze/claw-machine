@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaMTX WebRTC Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .config {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .config label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        .config input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #video {
+            width: 100%;
+            max-width: 800px;
+            background: #000;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.info { background: #e3f2fd; color: #1976d2; }
+        .status.success { background: #e8f5e9; color: #388e3c; }
+        .status.error { background: #ffebee; color: #d32f2f; }
+        #log {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MediaMTX WebRTC Connection Test</h1>
+
+        <div class="config">
+            <label for="serverUrl">WebRTC Server URL:</label>
+            <input type="text" id="serverUrl" value="http://183.179.249.63:8889/tapo/whep">
+
+            <label for="localUrl">Local Test URL (for internal testing):</label>
+            <input type="text" id="localUrl" value="http://192.168.50.177:8889/tapo/whep">
+        </div>
+
+        <div>
+            <button id="connectBtn" onclick="connectLocal()">Connect (Local)</button>
+            <button id="connectExtBtn" onclick="connectExternal()">Connect (External)</button>
+            <button id="stopBtn" onclick="stopStream()" disabled>Stop</button>
+        </div>
+
+        <div id="status"></div>
+
+        <video id="video" controls autoplay playsinline muted></video>
+
+        <h3>Connection Log:</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        let pc = null;
+        let video = document.getElementById('video');
+        let statusDiv = document.getElementById('status');
+        let logDiv = document.getElementById('log');
+        let connectBtn = document.getElementById('connectBtn');
+        let connectExtBtn = document.getElementById('connectExtBtn');
+        let stopBtn = document.getElementById('stopBtn');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '[ERROR]' : type === 'success' ? '[OK]' : '[INFO]';
+            logDiv.textContent += `${timestamp} ${prefix} ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function showStatus(message, type = 'info') {
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        async function connectLocal() {
+            const url = document.getElementById('localUrl').value;
+            await connect(url);
+        }
+
+        async function connectExternal() {
+            const url = document.getElementById('serverUrl').value;
+            await connect(url);
+        }
+
+        async function connect(whepUrl) {
+            try {
+                log(`Connecting to: ${whepUrl}`);
+                showStatus('Connecting...', 'info');
+
+                connectBtn.disabled = true;
+                connectExtBtn.disabled = true;
+                stopBtn.disabled = false;
+
+                // Create PeerConnection with ICE servers
+                const configuration = {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' }
+                    ]
+                };
+
+                pc = new RTCPeerConnection(configuration);
+                log('RTCPeerConnection created');
+
+                // Add transceiver for receiving video
+                pc.addTransceiver('video', { direction: 'recvonly' });
+                pc.addTransceiver('audio', { direction: 'recvonly' });
+                log('Added video and audio transceivers');
+
+                // Handle incoming tracks
+                pc.ontrack = (event) => {
+                    log(`Received ${event.track.kind} track`, 'success');
+                    if (event.track.kind === 'video') {
+                        video.srcObject = event.streams[0];
+                        showStatus('Video stream connected!', 'success');
+                    }
+                };
+
+                // Handle ICE candidates
+                pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        log(`ICE Candidate: ${event.candidate.candidate.substring(0, 50)}...`);
+                    }
+                };
+
+                // Handle connection state changes
+                pc.onconnectionstatechange = () => {
+                    log(`Connection state: ${pc.connectionState}`);
+                    if (pc.connectionState === 'connected') {
+                        showStatus('Connected!', 'success');
+                    } else if (pc.connectionState === 'failed') {
+                        showStatus('Connection failed!', 'error');
+                    }
+                };
+
+                // Handle ICE connection state changes
+                pc.oniceconnectionstatechange = () => {
+                    log(`ICE Connection state: ${pc.iceConnectionState}`);
+                };
+
+                // Create offer
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                log('Created and set local description (offer)');
+
+                // Send offer to server (WHEP protocol)
+                log('Sending offer to server...');
+                const response = await fetch(whepUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/sdp'
+                    },
+                    body: offer.sdp
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const answerSdp = await response.text();
+                log('Received answer from server', 'success');
+
+                // Set remote description (answer)
+                await pc.setRemoteDescription({
+                    type: 'answer',
+                    sdp: answerSdp
+                });
+                log('Set remote description (answer)', 'success');
+
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                showStatus(`Connection failed: ${error.message}`, 'error');
+                stopStream();
+            }
+        }
+
+        function stopStream() {
+            if (pc) {
+                pc.close();
+                pc = null;
+                log('Connection closed');
+            }
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            connectBtn.disabled = false;
+            connectExtBtn.disabled = false;
+            stopBtn.disabled = true;
+            showStatus('Disconnected', 'info');
+        }
+
+        // Initial log
+        log('WebRTC Test Page Ready');
+        log('Click "Connect (Local)" to test internal network connection');
+        log('Click "Connect (External)" to test external network connection');
+    </script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>WebRTC 監控系統（低延遲 + 超流暢）</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #header {
+      background: rgba(20, 20, 20, 0.95);
+      padding: 12px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 1.2em;
+      background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #video-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      position: relative;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.9em;
+    }
+
+    .status {
+      color: #4ade80;
+    }
+
+    .status.connecting {
+      color: #fbbf24;
+    }
+
+    .status.error {
+      color: #f87171;
+    }
+
+    /* 手機/平板控制按鈕 */
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: none;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      grid-template-rows: repeat(3, 60px);
+      gap: 10px;
+    }
+
+    .control-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      color: white;
+      font-size: 1.2em;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .control-btn:active {
+      background: rgba(100, 200, 255, 0.5);
+      transform: scale(0.95);
+    }
+
+    .control-btn.center {
+      background: rgba(255, 100, 100, 0.3);
+      border-color: rgba(255, 100, 100, 0.5);
+    }
+
+    /* 連線狀態 */
+    .connection-status {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.connecting {
+      background: #fbbf24;
+    }
+
+    .status-dot.error {
+      background: #f87171;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* 平板和手機顯示控制按鈕 */
+    @media (max-width: 1024px) {
+      .controls {
+        display: block;
+      }
+    }
+
+    /* 手機優化 */
+    @media (max-width: 768px) {
+      #header {
+        padding: 10px 16px;
+      }
+
+      h1 {
+        font-size: 1em;
+      }
+
+      .btn-grid {
+        grid-template-columns: repeat(3, 50px);
+        grid-template-rows: repeat(3, 50px);
+        gap: 8px;
+      }
+
+      .control-btn {
+        font-size: 1em;
+      }
+
+      .info {
+        top: 10px;
+        right: 10px;
+        padding: 6px 12px;
+        font-size: 0.75em;
+      }
+
+      .connection-status {
+        bottom: 10px;
+        left: 10px;
+        padding: 6px 12px;
+        font-size: 0.75em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <h1>⚡ 監控系統 - WebRTC 低延遲 + 超流暢</h1>
+  </div>
+
+  <div id="video-container">
+    <video id="video" autoplay muted playsinline></video>
+
+    <div class="info">
+      <span class="status" id="info-text">連接中...</span>
+    </div>
+
+    <div class="connection-status">
+      <div class="status-dot connecting" id="status-dot"></div>
+      <span id="status-text">連接中</span>
+    </div>
+
+    <!-- 手機/平板控制按鈕 -->
+    <div class="controls">
+      <div class="btn-grid">
+        <div></div>
+        <div class="control-btn" data-key="w">W</div>
+        <div></div>
+        <div class="control-btn" data-key="a">A</div>
+        <div class="control-btn center" data-key=" ">空白</div>
+        <div class="control-btn" data-key="d">D</div>
+        <div></div>
+        <div class="control-btn" data-key="s">S</div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const infoText = document.getElementById('info-text');
+    const statusText = document.getElementById('status-text');
+    const statusDot = document.getElementById('status-dot');
+
+    let pc = null;
+    let restartTimeout = null;
+
+    function updateStatus(status, message) {
+      statusText.textContent = message;
+      statusDot.className = 'status-dot ' + status;
+      infoText.className = 'status ' + status;
+      infoText.textContent = message;
+    }
+
+    async function startWebRTC() {
+      try {
+        updateStatus('connecting', '連接中...');
+
+        pc = new RTCPeerConnection({
+          iceServers: [{
+            urls: 'stun:stun.l.google.com:19302'
+          }]
+        });
+
+        pc.ontrack = (event) => {
+          console.log('✅ 收到視訊軌道');
+          video.srcObject = event.streams[0];
+          updateStatus('', '● 超低延遲 + 硬體解碼！');
+        };
+
+        pc.oniceconnectionstatechange = () => {
+          console.log('ICE 連接狀態:', pc.iceConnectionState);
+          if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+            updateStatus('error', '連接失敗，5秒後重試...');
+            scheduleRestart();
+          }
+        };
+
+        // 創建 offer
+        pc.addTransceiver('video', { direction: 'recvonly' });
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        // 發送 offer 到 MediaMTX
+        const response = await fetch('http://localhost:8889/tapo/whep', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/sdp'
+          },
+          body: offer.sdp
+        });
+
+        if (!response.ok) {
+          throw new Error('WHEP 請求失敗: ' + response.status);
+        }
+
+        // 設置 remote description
+        const answerSdp = await response.text();
+        await pc.setRemoteDescription(new RTCSessionDescription({
+          type: 'answer',
+          sdp: answerSdp
+        }));
+
+        console.log('✅ WebRTC 連接建立成功');
+
+      } catch (error) {
+        console.error('❌ WebRTC 錯誤:', error);
+        updateStatus('error', '連接錯誤: ' + error.message);
+        scheduleRestart();
+      }
+    }
+
+    function scheduleRestart() {
+      if (restartTimeout) return;
+      restartTimeout = setTimeout(() => {
+        restartTimeout = null;
+        if (pc) pc.close();
+        startWebRTC();
+      }, 5000);
+    }
+
+    // 鍵盤控制
+    document.addEventListener('keydown', (e) => {
+      if (['w', 'a', 's', 'd', ' '].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        console.log('按鍵:', e.key);
+        // 這裡可以加入控制邏輯
+      }
+    });
+
+    // 觸控控制
+    document.querySelectorAll('.control-btn').forEach(btn => {
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        console.log('觸控按鍵:', key);
+        // 這裡可以加入控制邏輯
+      });
+    });
+
+    // 啟動
+    startWebRTC();
+  </script>
+</body>
+</html>

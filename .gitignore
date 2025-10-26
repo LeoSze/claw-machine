@@ -1,0 +1,42 @@
+# 環境變數（包含資料庫密碼和 session 密鑰）
+.env
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# 作業系統
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 日誌檔案
+*.log
+logs/
+
+# MediaMTX 執行檔和配置
+mediamtx_v*_windows_amd64/
+mediamtx_v*_linux_amd64/
+mediamtx_v*_darwin_amd64/
+mediamtx.yml
+
+# HLS 串流暫存檔
+hls/
+*.ts
+*.m3u8
+
+# 測試和問題圖片
+*.jpeg
+*.jpg
+*.png
+nul
+
+# Python 測試檔案
+*.pyc
+__pycache__/

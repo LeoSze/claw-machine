@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>RPi 5路繼電器控制器</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        #container {
+            text-align: center;
+            padding: 40px;
+            border-radius: 12px;
+            background-color: white;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+        #status {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        #controls-container, #space-container {
+            display: flex;
+            gap: 20px; /* 按鍵之間的間距 */
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .key-control {
+            text-align: center;
+        }
+        .key {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #555;
+            background-color: #fafafa;
+            margin: 0 auto 15px auto;
+            box-shadow: 0 3px 0 #ccc;
+            user-select: none; /* 防止選取文字 */
+        }
+        /* 【新增】空白鍵的特殊樣式 */
+        #key-space {
+            width: 280px; /* 讓空白鍵更長 (60*4 + 20*2) */
+            font-size: 1.2em;
+        }
+        .light-indicator {
+            width: 50px;
+            height: 50px;
+            background-color: #444; /* 熄滅時的顏色 */
+            border-radius: 50%;
+            margin: 0 auto;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            border: 3px solid white;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+        }
+        /* 指示燈亮起的樣式 */
+        .light-indicator.on {
+            background-color: #00ff7f; /* 亮綠色 */
+            box-shadow: 0 0 20px #00ff7f, inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <h1 id="status">正在連接到伺服器...</h1>
+    <!-- 【修改】更新提示文字 -->
+    <p>按住鍵盤的「W, A, S, D」與「空白鍵」來控制對應的繼電器</p>
+    
+    <div id="controls-container">
+        <div class="key-control">
+            <div class="key">W</div>
+            <div class="light-indicator" id="light-W"></div>
+        </div>
+        <div class="key-control">
+            <div class="key">A</div>
+            <div class="light-indicator" id="light-A"></div>
+        </div>
+        <div class="key-control">
+            <div class="key">S</div>
+            <div class="light-indicator" id="light-S"></div>
+        </div>
+        <div class="key-control">
+            <div class="key">D</div>
+            <div class="light-indicator" id="light-D"></div>
+        </div>
+    </div>
+    <!-- 【新增】空白鍵的控制區塊 -->
+    <div id="space-container">
+        <div class="key-control">
+            <div class="key" id="key-space">SPACE</div>
+            <div class="light-indicator" id="light-Space"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const statusEl = document.getElementById('status');
+    
+    // !!! 重要：請將 '192.168.50.161' 換成您 Raspberry Pi 的實際 IP 位址 !!!
+    const PI_IP_ADDRESS = '192.168.50.161';
+    const ws = new WebSocket(`ws://${PI_IP_ADDRESS}:8080`);
+
+    // 【修改】將按鍵的 Code 與對應的 HTML 元素和訊息名稱關聯起來
+    const keyMap = {
+        'KeyW': { element: document.getElementById('light-W'), name: 'W' },
+        'KeyA': { element: document.getElementById('light-A'), name: 'A' },
+        'KeyS': { element: document.getElementById('light-S'), name: 'S' },
+        'KeyD': { element: document.getElementById('light-D'), name: 'D' },
+        'Space': { element: document.getElementById('light-Space'), name: 'Space' } // 【新增】空白鍵的對應
+    };
+
+    ws.onopen = () => {
+        console.log('Connected to server');
+        statusEl.textContent = '✅ 連線成功';
+        statusEl.style.color = '#28a745';
+    };
+
+    ws.onclose = () => {
+        console.log('Disconnected from server');
+        statusEl.textContent = '❌ 連線中斷';
+        statusEl.style.color = '#dc3545';
+    };
+
+    ws.onerror = (error) => {
+        console.error('WebSocket Error:', error);
+        statusEl.textContent = '❌ 連線錯誤';
+        statusEl.style.color = '#dc3545';
+    };
+
+    // 監聽鍵盤按下事件
+    document.addEventListener('keydown', (event) => {
+        // 從 keyMap 中查找對應的按鍵設定
+        const keyInfo = keyMap[event.code];
+        
+        // 如果找到按鍵且不是重複觸發
+        if (keyInfo && !event.repeat) {
+            // 發送 "KEY_DOWN" 訊息, 例如 "W_DOWN" 或 "Space_DOWN"
+            ws.send(`${keyInfo.name}_DOWN`);
+            // 點亮對應的指示燈
+            keyInfo.element.classList.add('on');
+        }
+    });
+
+    // 監聽鍵盤放開事件
+    document.addEventListener('keyup', (event) => {
+        const keyInfo = keyMap[event.code];
+
+        if (keyInfo) {
+            // 發送 "KEY_UP" 訊息, 例如 "W_UP" 或 "Space_UP"
+            ws.send(`${keyInfo.name}_UP`);
+            // 熄滅對應的指示燈
+            keyInfo.element.classList.remove('on');
+        }
+    });
+</script>
+
+</body>
+</html>
